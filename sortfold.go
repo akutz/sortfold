@@ -37,6 +37,9 @@ func StringsAreSorted(a []string) bool {
 // CompareFold reports whether s and t, interpreted as UTF-8 strings,
 // are equal under Unicode case-folding. A return value of 0 means s==t,
 // <0 means s<t, and >0 means s>t.
+//
+// This function is a modification of the golang strings.EqualFold function
+// from strings/strings.go at https://goo.gl/yiMur6.
 func CompareFold(s, t string) int {
 	for s != "" && t != "" {
 
