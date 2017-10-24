@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
+
 	"github.com/akutz/sortfold"
 )
 
@@ -269,6 +272,22 @@ func Benchmark_LCasedSort_542000_Words____MixedCase_Shuffled(b *testing.B) {
 	benchLCasedSort(b, duplicate(1000, strings.Fields(loremIpsum)))
 }
 
+func Benchmark_CollatSort_542000_Words____MixedCase_Shuffled(b *testing.B) {
+	benchCollatSort(b, duplicate(1000, strings.Fields(loremIpsum)))
+}
+
+func Benchmark_ColatDSort_542000_Words____MixedCase_Shuffled(b *testing.B) {
+	words := duplicate(1000, strings.Fields(loremIpsum))
+	data := make([][]string, b.N)
+	for i := 0; i < b.N; i++ {
+		data[i] = copyFrom(words)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ignoreCase.SortStrings(data[i])
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //                     LCASE-INSENSITIVE SORT IFACE IMPL                      //
 ////////////////////////////////////////////////////////////////////////////////
@@ -284,6 +303,26 @@ func (s toLower) Less(i, j int) bool {
 }
 
 func (s toLower) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                        COLLATOR SORT IFACE IMPL                            //
+////////////////////////////////////////////////////////////////////////////////
+
+var ignoreCase = collate.New(language.English, collate.IgnoreCase)
+
+type collater []string
+
+func (s collater) Len() int {
+	return len(s)
+}
+
+func (s collater) Less(i, j int) bool {
+	return ignoreCase.CompareString(s[i], s[j]) < 0
+}
+
+func (s collater) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
@@ -322,12 +361,20 @@ func benchLCasedSort(b *testing.B, data []string) {
 	benchSort(b, newLCasedSortWrapper, data)
 }
 
+func benchCollatSort(b *testing.B, data []string) {
+	benchSort(b, newCollatSortWrapper, data)
+}
+
 func newFoldedSortWrapper(src []string) sort.Interface {
 	return sort.Interface(sortfold.StringSlice(copyFrom(src)))
 }
 
 func newLCasedSortWrapper(src []string) sort.Interface {
 	return sort.Interface(toLower(copyFrom(src)))
+}
+
+func newCollatSortWrapper(src []string) sort.Interface {
+	return sort.Interface(collater(copyFrom(src)))
 }
 
 func benchSort(b *testing.B, f func([]string) sort.Interface, d []string) {
