@@ -58,9 +58,6 @@ func CompareFold(s, t string) int {
 			tr, t = r, t[size:]
 		}
 
-		// If they match, keep going; if not, return false.
-		//log.Printf("sr=%[1]v,%[1]c tr=%[2]v,%[2]c", sr, tr)
-
 		// Easy case.
 		if sr == tr {
 			continue
@@ -73,28 +70,48 @@ func CompareFold(s, t string) int {
 			result = -result
 		}
 
-		// Fast check for ASCII.
-		if sr < utf8.RuneSelf && tr < utf8.RuneSelf {
-			sr := sr
-			tr := tr
-			if 'A' <= sr && sr <= 'Z' {
-				sr = sr + 'a' - 'A'
-			}
-			if 'A' <= tr && tr <= 'Z' {
-				tr = tr + 'a' - 'A'
-			}
-			//log.Printf("fastcheck: sr=%[1]v,%[1]c tr=%[2]v,%[2]c", sr, tr)
-			if sr == tr {
-				continue
-			}
-			if sr < tr {
-				//log.Printf("sr < tr = %d", -1)
+		// Fast check for ASCII. Since sr < tr, if tr is ASCII then sr
+		// is ASCII.
+		if tr < utf8.RuneSelf {
+			// If tr <= 'Z' then so is sr, which means there is no mixed-case
+			// and that sr < tr.
+			if tr <= 'Z' {
 				return -result
 			}
-			if sr > tr {
-				//log.Printf("sr > tr = %d", 1)
+
+			// At this point the following is known:
+			//   1. sr < tr
+			//   2. tr > 'Z', meaning tr is lower-case
+			// The following is unknown:
+			//   1. The case of sr
+			// The case of sr is required to determine the order of sr and tr.
+
+			// If sr <= 'Z' then it must be folded to determine the order of
+			// sr and tr.
+			if sr <= 'Z' {
+				sr2 := sr + 'a' - 'A'
+
+				// When folded as sr2, sr == tr, so continue to compare the
+				// string.
+				if sr2 == tr {
+					continue
+				}
+
+				// If sr2 < tr then sr < tr.
+				if sr2 < tr {
+					return -result
+				}
+
+				// sr > tr
 				return result
 			}
+
+			// Because sr > 'Z' and tr > 'Z', sr and tr can be
+			// compared directly.
+			if sr < tr {
+				return -result
+			}
+			return result
 		}
 
 		// General case. SimpleFold(x) returns the next equivalent rune > x
@@ -102,9 +119,7 @@ func CompareFold(s, t string) int {
 		r := unicode.SimpleFold(sr)
 		for r != sr && r < tr {
 			r = unicode.SimpleFold(r)
-			//log.Printf("+simplefold: r=%[1]v,%[1]c", r)
 		}
-		//log.Printf("simplefold: r=%[1]v,%[1]c tr=%[2]v,%[2]c", r, tr)
 		if r == tr {
 			continue
 		}
