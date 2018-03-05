@@ -68,7 +68,10 @@ func TestCompareFold(t *testing.T) {
 }
 
 func TestAZ(t *testing.T) {
+	assertEq(t, 1, "ZZZ", "aaa")
 	assertEq(t, -1, "A", "Z")
+	assertEq(t, 1, "Z", "A")
+	assertEq(t, 1, "Zz", "AA")
 	szs := []string{"Z", "A"}
 	sortfold.Strings(szs)
 	assertEl(t, szs, 0, "A")
