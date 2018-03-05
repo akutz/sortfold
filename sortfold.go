@@ -59,30 +59,41 @@ func CompareFold(s, t string) int {
 		}
 
 		// If they match, keep going; if not, return false.
+		//log.Printf("sr=%[1]v,%[1]c tr=%[2]v,%[2]c", sr, tr)
 
 		// Easy case.
-		if tr == sr {
+		if sr == tr {
 			continue
 		}
 
 		// Make sr < tr to simplify what follows.
 		result := 1
 		if tr < sr {
-			result = -result
 			tr, sr = sr, tr
+			result = -result
 		}
+
 		// Fast check for ASCII.
-		if tr < utf8.RuneSelf && 'A' <= sr && sr <= 'Z' {
-			// ASCII, and sr is upper case.  tr must be lower case.
-			srr := sr + 'a' - 'A'
-			if tr == srr {
+		if sr < utf8.RuneSelf && tr < utf8.RuneSelf {
+			sr := sr
+			tr := tr
+			if 'A' <= sr && sr <= 'Z' {
+				sr = sr + 'a' - 'A'
+			}
+			if 'A' <= tr && tr <= 'Z' {
+				tr = tr + 'a' - 'A'
+			}
+			//log.Printf("fastcheck: sr=%[1]v,%[1]c tr=%[2]v,%[2]c", sr, tr)
+			if sr == tr {
 				continue
 			}
-			if tr < srr {
-				return result
-			}
-			if tr > srr {
+			if sr < tr {
+				//log.Printf("sr < tr = %d", -1)
 				return -result
+			}
+			if sr > tr {
+				//log.Printf("sr > tr = %d", 1)
+				return result
 			}
 		}
 
@@ -91,15 +102,17 @@ func CompareFold(s, t string) int {
 		r := unicode.SimpleFold(sr)
 		for r != sr && r < tr {
 			r = unicode.SimpleFold(r)
+			//log.Printf("+simplefold: r=%[1]v,%[1]c", r)
 		}
+		//log.Printf("simplefold: r=%[1]v,%[1]c tr=%[2]v,%[2]c", r, tr)
 		if r == tr {
 			continue
 		}
-		if tr < r {
-			return result
-		}
-		if tr > r {
+		if r < tr {
 			return -result
+		}
+		if r > tr {
+			return result
 		}
 	}
 
