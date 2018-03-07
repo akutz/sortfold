@@ -323,21 +323,7 @@ func Benchmark_ColatDSort_542000_Words____MixedCase_Shuffled(b *testing.B) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//                 LOREM IPSUM - MIXED CASE - SORTED - GREEK                  //
-////////////////////////////////////////////////////////////////////////////////
-func Benchmark_FoldedSort_________________MixedCase_Sorted___Greek(b *testing.B) {
-	data := strings.Fields(loremIpsumGreek)
-	sort.Strings(data)
-	benchFoldedSort(b, data)
-}
-func Benchmark_LCasedSort_________________MixedCase_Sorted___Greek(b *testing.B) {
-	data := strings.Fields(loremIpsumGreek)
-	sort.Strings(data)
-	benchLCasedSort(b, data)
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//                  LOREM IPSUM - MIXED CASE - SHUFFLED - GREEK               //
+//                 LOREM IPSUM - MIXED CASE - SHUFFLED - GREEK                //
 ////////////////////////////////////////////////////////////////////////////////
 func Benchmark_FoldedSort_________________MixedCase_Shuffled_Greek(b *testing.B) {
 	benchFoldedSort(b, strings.Fields(loremIpsumGreek))
@@ -345,19 +331,20 @@ func Benchmark_FoldedSort_________________MixedCase_Shuffled_Greek(b *testing.B)
 func Benchmark_LCasedSort_________________MixedCase_Shuffled_Greek(b *testing.B) {
 	benchLCasedSort(b, strings.Fields(loremIpsumGreek))
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//                 LOREM IPSUM - MIXED CASE - SORTED - HEBREW                 //
-////////////////////////////////////////////////////////////////////////////////
-func Benchmark_FoldedSort________________MixedCase_Sorted___Hebrew(b *testing.B) {
-	data := strings.Fields(loremIpsumHebrew)
-	sort.Strings(data)
-	benchFoldedSort(b, data)
+func Benchmark_CollatSort_________________MixedCase_Shuffled_Greek(b *testing.B) {
+	benchCollatSortGreek(b, strings.Fields(loremIpsumGreek))
 }
-func Benchmark_LCasedSort________________MixedCase_Sorted___Hebrew(b *testing.B) {
-	data := strings.Fields(loremIpsumHebrew)
-	sort.Strings(data)
-	benchLCasedSort(b, data)
+
+func Benchmark_ColatDSort_________________MixedCase_Shuffled_Greek(b *testing.B) {
+	words := strings.Fields(loremIpsumGreek)
+	data := make([][]string, b.N)
+	for i := 0; i < b.N; i++ {
+		data[i] = copyFrom(words)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ignoreCaseGreek.SortStrings(data[i])
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -368,6 +355,21 @@ func Benchmark_FoldedSort________________MixedCase_Shuffled_Hebrew(b *testing.B)
 }
 func Benchmark_LCasedSort________________MixedCase_Shuffled_Hebrew(b *testing.B) {
 	benchLCasedSort(b, strings.Fields(loremIpsumHebrew))
+}
+func Benchmark_CollatSort_________________MixedCase_Shuffled_Hebrew(b *testing.B) {
+	benchCollatSortHebrew(b, strings.Fields(loremIpsumHebrew))
+}
+
+func Benchmark_ColatDSort_________________MixedCase_Shuffled_Hebrew(b *testing.B) {
+	words := strings.Fields(loremIpsumHebrew)
+	data := make([][]string, b.N)
+	for i := 0; i < b.N; i++ {
+		data[i] = copyFrom(words)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ignoreCaseHebrew.SortStrings(data[i])
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -389,7 +391,7 @@ func (s toLower) Swap(i, j int) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//                        COLLATOR SORT IFACE IMPL                            //
+//                  COLLATOR SORT IFACE IMPL - ENGLISH                        //
 ////////////////////////////////////////////////////////////////////////////////
 
 var ignoreCase = collate.New(language.English, collate.IgnoreCase)
@@ -405,6 +407,46 @@ func (s collater) Less(i, j int) bool {
 }
 
 func (s collater) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                     COLLATOR SORT IFACE IMPL - GREEK                       //
+////////////////////////////////////////////////////////////////////////////////
+
+var ignoreCaseGreek = collate.New(language.Greek, collate.IgnoreCase)
+
+type collaterGreek []string
+
+func (s collaterGreek) Len() int {
+	return len(s)
+}
+
+func (s collaterGreek) Less(i, j int) bool {
+	return ignoreCaseGreek.CompareString(s[i], s[j]) < 0
+}
+
+func (s collaterGreek) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//                       COLLATOR SORT IFACE IMPL - HEBREW                    //
+////////////////////////////////////////////////////////////////////////////////
+
+var ignoreCaseHebrew = collate.New(language.Hebrew, collate.IgnoreCase)
+
+type collaterHebrew []string
+
+func (s collaterHebrew) Len() int {
+	return len(s)
+}
+
+func (s collaterHebrew) Less(i, j int) bool {
+	return ignoreCaseHebrew.CompareString(s[i], s[j]) < 0
+}
+
+func (s collaterHebrew) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
@@ -446,6 +488,12 @@ func benchLCasedSort(b *testing.B, data []string) {
 func benchCollatSort(b *testing.B, data []string) {
 	benchSort(b, newCollatSortWrapper, data)
 }
+func benchCollatSortGreek(b *testing.B, data []string) {
+	benchSort(b, newCollatSortWrapperGreek, data)
+}
+func benchCollatSortHebrew(b *testing.B, data []string) {
+	benchSort(b, newCollatSortWrapperHebrew, data)
+}
 
 func newFoldedSortWrapper(src []string) sort.Interface {
 	return sort.Interface(sortfold.StringSlice(copyFrom(src)))
@@ -457,6 +505,12 @@ func newLCasedSortWrapper(src []string) sort.Interface {
 
 func newCollatSortWrapper(src []string) sort.Interface {
 	return sort.Interface(collater(copyFrom(src)))
+}
+func newCollatSortWrapperGreek(src []string) sort.Interface {
+	return sort.Interface(collaterGreek(copyFrom(src)))
+}
+func newCollatSortWrapperHebrew(src []string) sort.Interface {
+	return sort.Interface(collaterHebrew(copyFrom(src)))
 }
 
 func benchSort(b *testing.B, f func([]string) sort.Interface, d []string) {
