@@ -16,6 +16,4 @@ go:
 go_import_path: github.com/akutz/sortfold
 
 install: true
-script:
-  - go test -v
-  - go test -run Benchmark -bench Benchmark -benchmem -v
+script:  go test -v
